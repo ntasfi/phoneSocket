@@ -12,10 +12,9 @@
 /*
 todo:
   avoid using Object.prototype.method = function(){}; - DONE
-  avoid global scope -> check nothing ie being hoisted into
-  look into using closures with my code to keep it cleaner
+  avoid global scope -> check nothing ie being hoisted into 
   better error handling -> throw new Error(message)
-  refactor
+  refactor - DONE x1
   make it cleaner
 */
 
@@ -38,7 +37,7 @@ var phoneSocket = (function() {
         z: null,
         alpha: null, //tilted around the z-axis
         beta: null, //titled front-to-back
-        gamma: null, //titled side-to-side
+        gamma: null //titled side-to-side
       }
     };
 
@@ -47,7 +46,7 @@ var phoneSocket = (function() {
         y: 0,
         alpha: 0,
         beta: 0,
-        gamma: 0,
+        gamma: 0
     };
 
     /*
@@ -107,7 +106,7 @@ var phoneSocket = (function() {
 
       //encode measurements here and send.
       socket.send(JSON.stringify(temp));
-    } //end sendUpdate
+    }; //end sendUpdate
 
     /*
     * Attemps to bind to the devices sensors via eventListeners
@@ -223,7 +222,7 @@ var phoneSocket = (function() {
         settings.frequency = newFreq;
       },
 
-      doesBrowserSupport: function() {
+      getBrowserSupport: function() {
         return checkBrowserSupport();
       },
 
@@ -245,17 +244,18 @@ var phoneSocket = (function() {
         y: null,
         alpha: null,
         beta: null,
-        gamma: null,
+        gamma: null
       }
     }; //end return inside init
 
-  }, //end init
+  }; //end init
 
   return {
     getInstance: function() {
       if (!instance) {
         instance = init();
       }
+      return instance;
     }
   }; //end return
 })();
