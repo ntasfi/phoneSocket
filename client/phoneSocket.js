@@ -11,167 +11,251 @@
 
 /*
 todo:
-  better error handling
+  avoid using Object.prototype.method = function(){}; - DONE
+  avoid global scope -> check nothing ie being hoisted into
+  look into using closures with my code to keep it cleaner
+  better error handling -> throw new Error(message)
   refactor
   make it cleaner
 */
 
 //first one is the value of the measurement and the second is our basevalue aka calibration
 
-var phoneSocket = function(serverAddress, frequency) {
-  this.serverAddress = serverAddress || 'localhost:9999';
-  this.socket = new WebSocket("ws://"+this.serverAddress); //connect to server
-  this.settings = {
-    frequency: frequency || 500,
-    updateValues: {
-      x: null,
-      y: null,
-      z: null,
-      alpha: null, //tilted around the z-axis
-      beta: null, //titled front-to-back
-      gamma: null, //titled side-to-side
-    }
-  };
-  this.measurements = {
-      x: [null, 0],
-      y: [null, 0],
-      alpha: [null, 0],
-      beta: [null, 0],
-      gamma: [null, 0],
-  };
+var phoneSocket = (function() {
+  var instance;
 
+  function init() { //private methods and variables
+    
+    var serverAddress = 'localhost:9999';
+    var socket = null; //connect to server
 
-  this.socket.onmessage = function(e) { //get our first message from server which tells us what to set
-    console.log("WebSocket: Connected.");
-    console.log('websock: '+ e.data);
+    var settings = {
+      useWSS: false,
+      frequency: 500,
+      updateValues: {
+        x: null,
+        y: null,
+        z: null,
+        alpha: null, //tilted around the z-axis
+        beta: null, //titled front-to-back
+        gamma: null, //titled side-to-side
+      }
+    };
 
-    //set our values what to send over...
-    var setValues = JSON.parse(e.data);
-    for (val in setValues) {
-      this.settings.updateValues[val] = setValues[val];
-    }
-  };
+    var calibration = {
+        x: 0,
+        y: 0,
+        alpha: 0,
+        beta: 0,
+        gamma: 0,
+    };
 
-  var err = this.bindPolling(); //bind the polling events
-  if (err != true) {
-    console.log('Error: Could not bind polling.');
-  }
+    /*
+    * Create a socket connection to the server address.
+    *
+    * Returns true or false.
+    */
+    function createSocket() {
+      var conType = "ws";
 
-  this.calibrateDevice(); //calibrate device
+      if (useWSS) {
+        conType = "wss";
+      }
 
-  //this bypasses the window being set as a scope
-  setInterval(
-    function(e){
-      e.sendUpdate.call(e)
-    }
-  , this.frequency, this); //start sending!
-};
+      socket = new WebSocket(conType+"://"+serverAddress); //connect to server
+      socket.onmessage = function(e) { //get our first message from server which tells us what to set
+        console.log("WebSocket: Connected.");
+        console.log('websock: '+ e.data);
 
-//handles sending to the server
-phoneSocket.prototype.sendUpdate = function() {
-  if (this.settings.updateValues.x == null) { //check if our device updated from the server
-    console.log("Error: Update values have not been set.");
-    return -1;
-  }
+        //set our values what to send over...
+        var setValues = JSON.parse(e.data);
+        for (val in setValues) {
+          settings.updateValues[val] = setValues[val];
+        }
 
-  if (this.socket == null) { //has the socket been created?
-    console.log("Error Socket: Socket has not been set.");
-    return -1;
-  }
+      }
+    };
 
-  if (this.socket.readyState != WebSocket.OPEN) { //is the socket open?
-    console.log("Error Socket: Socket not ready.");
-    return -1;
-  }
+    /*
+    * 
+    * Sends updates to the server in JSON form, based on what was set as important
+    * 
+    */
+    function sendUpdate() {
+      if (settings.updateValues.x == null) { //check if our device updated from the server
+        console.log("Error: Update values have not been set.");
+        return -1;
+      }
 
-  var temp = {};
+      if (socket == null) { //has the socket been created?
+        console.log("Error Socket: Socket has not been set.");
+        return -1;
+      }
 
-  for (val in this.settings.updateValues) { //for each value in updateValues
-    if (this.settings.updateValues[val] == true) { //if its not equal to null, aka its important
-      temp[val] = this.measurements[0][val];
-    }
-  }
-  //encode measurements here and send.
-  this.socket.send(JSON.stringify(temp));
-} //end sendUpdate
+      if (socket.readyState != WebSocket.OPEN) { //is the socket open?
+        console.log("Error Socket: Socket not ready.");
+        return -1;
+      }
 
-phoneSocket.prototype.bindPolling = function() {
-  var err = this.doesDeviceSupport('devicemotion');
-  if (err != true) {
-    console.log('Device Error: Does not support DeviceMotionEvent.');
-    return -1;
-  }
+      var temp = {};
 
-  var err = this.doesDeviceSupport('deviceorientation');
-  if (err != true) {
-    console.log('Device Error: Does not support DeviceOrientationEvent.');
-    return -1;
-  }
+      for (val in settings.updateValues) { //for each value in updateValues
+        if (settings.updateValues[val] == true) { //if its not equal to null, aka its important
+          temp[val] = measurements[val];
+        }
+      }
 
-  if (window && window.addEventListener) {
-    window.addEventListener('devicemotion', function(e) {
-      this.measurements.x[0] = e.x - this.measurements.x[1];
-      this.measurements.y[0] = e.y - this.measurements.y[1];
-      this.measurements.z[0] = e.z - this.measurements.z[1];
-    }, false);
-    window.addEventListener('deviceorientation', function(e) {
-      this.measurements.alpha[0] = e.alpha - this.measurements.alpha[1];
-      this.measurements.beta[0] = e.beta - this.measurements.beta[1];
-      this.measurements.gamma[0] = e.gamma - this.measurements.gamma[1];
-    }, false);
-    return true;
-  } else {
-    return -1;
-  }
-}
+      //encode measurements here and send.
+      socket.send(JSON.stringify(temp));
+    } //end sendUpdate
 
-//so with mobile-webkit it has alpha set to whatever the first value is read in as so we need to calibrate it!
-phoneSocket.prototype.calibrateDevice = function() {
-    for(var i in this.measurements) { //for each measurement
-      if (this.measurements[i][0] != null) { //if the reading isnt null
-        this.measurements[i][1] = this.measurements[i][0] //set our calibration to the new reading
+    /*
+    * Attemps to bind to the devices sensors via eventListeners
+    *
+    * Returns true if successful and false otherwise.
+    */
+    function bindPolling() {
+
+      if (checkBrowserSupport() == false) {
+        return false;
+      }
+
+      if (window && window.addEventListener) {
+        window.addEventListener('devicemotion', function(e) {
+          measurements.x = e.x - calibration.x;
+          measurements.y = e.y - calibration.y;
+          measurements.z = e.z - calibration.z;
+        }, false);
+        window.addEventListener('deviceorientation', function(e) {
+          measurements.alpha = e.alpha - calibration.alpha;
+          measurements.beta = e.beta - calibration.beta;
+          measurements.gamma = e.gamma - calibration.gamma;
+        }, false);
+        return true;
       } else {
-        this.measurements[i][1] = 0 //otherwise, aka our measurement reading IS null then set measurments to 0.
+        return false;
+      }
+    }; //end bindPolling
+
+
+    /*
+    *
+    * Gets the measurments from the sensors at this exact moment and sets the calibration variables
+    *
+    */
+    function calibrateDevice() {
+        for(var i in calibration) { //for each measurement
+          if (measurements != null) { //if the reading isnt null
+            calibration[i] = measurements[i]; //set our calibration to the new reading
+          } else {
+            calibration[i] = 0; //otherwise, aka our measurement reading IS null then set measurments to 0.
+          }
+        }
+    }; //end calibrateDevice
+
+
+    function checkBrowserSupport() {
+      var err = doesDeviceSupport('devicemotion');
+      if (err != true) {
+        console.log('Device Error: Does not support DeviceMotionEvent.');
+        return false;
+      }
+      var err = doesDeviceSupport('deviceorientation');
+      if (err != true) {
+        console.log('Device Error: Does not support DeviceOrientationEvent.');
+        return false;
+      }      
+    };
+
+    /*
+    *
+    * Checks to see if the eventName is supported by the browser.
+    *
+    * Returns true or false.
+    */
+    function doesDeviceSupport(eventName) {
+      var d = {
+        eName: eventName,
+        obj: null,
+      }
+
+      function handleEvent(e) { //they BOTH have beta, gamma and alpha and if they are all null then its the same thing
+        console.log(e);
+        if (e === undefined) {
+          return false;
+        }
+        if (e.gamma == null && e.beta == null && e.alpha == null) {
+          return false;
+        }
+      }
+
+      switch(d.eName) {
+        case "deviceorientation":
+          d.obj = window.DeviceOrientationEvent;
+          break;
+        case "devicemotion":
+          d.obj = window.DeviceMotionEvent;
+          break;
+        default:
+          console.log('Error: No value given for eventName.');
+          return -1; //nothing given
+      }
+
+      if (d.obj) { //check for our object if it exists
+        // the first ipad has a little gotcha where it says it supports it
+        // and fires once but everything is null.
+        window.addEventListener(d.eName, handleEvent, false);
+        window.removeEventListener(d.eName, handleEvent, false);
+        return true;
+      } else {
+        return false;
+      }
+    }; //end supportsDeviceOrientation
+
+    return {
+      //public methods and variables
+
+      setServerAddress: function(newAddress) {
+        serverAddress = newAddress;
+      },
+
+      setFrequency: function(newFreq) {
+        settings.frequency = newFreq;
+      },
+
+      doesBrowserSupport: function() {
+        return checkBrowserSupport();
+      },
+
+      start: function() {
+        createSocket();
+
+        var err = bindPolling();
+        if (err != true) {
+          console.log("Error: Could not bind.");
+        }
+
+        calibrateDevice();
+
+        setInterval(sendUpdate, frequency);
+      },
+
+      measurements: {
+        x: null,
+        y: null,
+        alpha: null,
+        beta: null,
+        gamma: null,
+      }
+    }; //end return inside init
+
+  }, //end init
+
+  return {
+    getInstance: function() {
+      if (!instance) {
+        instance = init();
       }
     }
-} //end calibrateDevice
-
-//check if the device supports the events
-phoneSocket.prototype.doesDeviceSupport = function(eventName) {
-  var d = {
-		eName: eventName,
-		obj: null,
-	}
-
-  function handleEvent(e) { //they BOTH have beta, gamma and alpha and if they are all null then its the same thing
-    console.log(e);
-    if (e === undefined) {
-      return false;
-    }
-    if (e.gamma == null && e.beta == null && e.alpha == null) {
-      return false;
-    }
-  }
-
-	switch(d.eName) {
-		case "deviceorientation":
-			d.obj = window.DeviceOrientationEvent;
-      break;
-		case "devicemotion":
-			d.obj = window.DeviceMotionEvent;
-      break;
-		default:
-      console.log('Error: No value given for eventName.');
-			return -1; //nothing given
-	}
-
-	if (d.obj) { //check for our object if it exists
-		// the first ipad has a little gotcha where it says it supports it
-		// and fires once but everything is null.
-		window.addEventListener(d.eName, handleEvent, false);
-		window.removeEventListener(d.eName, handleEvent, false);
-		return true;
-	} else {
-		return false;
-	}
-}; //end supportsDeviceOrientation
+  }; //end return
+})();
