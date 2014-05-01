@@ -1,0 +1,27 @@
+<html>
+<head>
+<title>Mobile</title>
+
+</head>
+<body>
+<h1>In lobby LOBBYNAMEHERE</h1> 
+
+</body>
+<script src="file://localhost/Users/normantasfi/Google%20Drive/dev-projects/2014/phoneSocket/client/phoneSocket.js"></script>
+<script>
+
+if (typeof phoneSocket != "undefined") {
+	var pS = phoneSocket.getInstance();
+
+	if (pS.isBrowserSupported()) {
+		pS.setServerAddress("localhost:8080");
+		pS.setFrequency(1000);
+		pS.start(); //kick it off
+	} else {
+		console.log("Browser is not supported.");
+	}
+} else {
+	console.log("Could not find phoneSocket");
+}
+</script>
+</html>

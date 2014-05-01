@@ -1,0 +1,5 @@
+phoneSocketServer/phoneSocketServer
+src/
+*.a
+*.o
+*.so

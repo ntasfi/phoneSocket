@@ -25,7 +25,7 @@ var phoneSocket = (function() {
 
   function init() { //private methods and variables
     
-    var serverAddress = 'localhost:9999';
+    var serverAddress = 'localhost:8080';
     var socket = null; //connect to server
 
     var settings = {
@@ -222,7 +222,7 @@ var phoneSocket = (function() {
         settings.frequency = newFreq;
       },
 
-      getBrowserSupport: function() {
+      isBrowserSupported: function() {
         return checkBrowserSupport();
       },
 
