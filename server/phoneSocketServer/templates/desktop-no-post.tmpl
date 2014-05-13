@@ -1,0 +1,27 @@
+<html>
+<head>
+<title>Desktop</title>
+</head>
+<body>
+<h1>Create a lobby</h1> 
+
+<form action="/desktop" name=lobbyCreation method="POST">
+
+Max Players: <input maxLength=1 size=1
+name=numberAllowedUsers value="" title="Max Players">
+<br>
+<br>
+Listen For:
+<br>
+<input type="checkbox" name="X" value="true">X<br>
+<input type="checkbox" name="Y" value="true">Y<br>
+<input type="checkbox" name="Z" value="true">Z<br>
+<input type="checkbox" name="Alpha" value="true">Alpha<br>
+<input type="checkbox" name="Beta" value="true">Beta<br>
+<input type="checkbox" name="Gamma" value="true">Gamma<br>
+<br>
+<br>
+<input type=submit value="Create Lobby">
+</form>
+</body>
+</html>

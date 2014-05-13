@@ -26,28 +26,49 @@ var phoneSocket = (function() {
   function init() { //private methods and variables
     
     var serverAddress = 'localhost:8080';
+    var clientSendInterval = null; //holds the interval timer object
     var socket = null; //connect to server
-
+    var deviceID = guid(); //make a unique id for this device
+    var failureCount = 0;
     var settings = {
+      hasBeenConfigured: false,
+      lobbyID: null,
       useWSS: false,
-      frequency: 500,
+      frequency: 1000,
       updateValues: {
-        x: null,
-        y: null,
-        z: null,
-        alpha: null, //tilted around the z-axis
-        beta: null, //titled front-to-back
-        gamma: null //titled side-to-side
+        X: false,
+        Y: false,
+        Z: false,
+        Alpha: false, //tilted around the z-axis
+        Beta: false, //titled front-to-back
+        Gamma: false //titled side-to-side
       }
     };
 
     var calibration = {
-        x: 0,
-        y: 0,
-        alpha: 0,
-        beta: 0,
-        gamma: 0
+        X: 0,
+        Y: 0,
+        Z: 0,
+        Alpha: 0,
+        Beta: 0,
+        Gamma: 0
     };
+
+    var measurements = {
+        X: null,
+        Y: null,
+        Z: null,
+        Alpha: null,
+        Beta: null,
+        Gamma: null
+    };
+
+    //source: http://note19.com/2007/05/27/javascript-guid-generator/
+    function guid() {
+      function s4() { return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1); }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+    };
+
 
     /*
     * Create a socket connection to the server address.
@@ -57,21 +78,48 @@ var phoneSocket = (function() {
     function createSocket() {
       var conType = "ws";
 
-      if (useWSS) {
+      if (settings.useWSS) {
         conType = "wss";
       }
 
       socket = new WebSocket(conType+"://"+serverAddress); //connect to server
-      socket.onmessage = function(e) { //get our first message from server which tells us what to set
-        console.log("WebSocket: Connected.");
-        console.log('websock: '+ e.data);
-
+      console.log("Socket created.");
+      socket.onmessage = function(e) {
         //set our values what to send over...
-        var setValues = JSON.parse(e.data);
-        for (val in setValues) {
-          settings.updateValues[val] = setValues[val];
-        }
+        var recievedData = null;
 
+        //the server sends two blobs to the client with different sizes. This might be PingFrames or connectFrames etc.
+        if (e.data.size) {
+           recievedData = e.data;
+        } else {
+          recievedData = JSON.parse(e.data);  
+        }
+        
+
+        if (recievedData['Error']) { //if we got a 
+          console.log(recievedData['Error']);
+        } else if (recievedData['ping']) {
+          console.log("Recieved a ping from server.")
+        } else if (recievedData['Settings']) {
+          for (val in recievedData['Settings']) {
+            var v = val.charAt(0).toUpperCase() + val.substring(1);
+            settings.updateValues[v] = true;
+          }
+          settings.hasBeenConfigured = true;
+          console.log("Client has been configured.");
+        } else {
+          console.log("Recieved unknown data...");
+        }
+      } //end onmessage
+
+      socket.onopen = function(e) { //get our first message from server which tells us what to set
+        console.log("WebSocket: Connected to "+ serverAddress);
+        var entity = {
+          LobbyID: settings.lobbyID,
+          DeviceID: deviceID,
+          IsDesktop: false,
+        };
+        socket.send(JSON.stringify(entity)); //let the server know this is our first connection.
       }
     };
 
@@ -81,18 +129,31 @@ var phoneSocket = (function() {
     * 
     */
     function sendUpdate() {
-      if (settings.updateValues.x == null) { //check if our device updated from the server
+      if (failureCount > 100) {
+        clearInterval(clientSendInterval);
+        console.log("Cleared send interval. Reached max failure count.")
+      }
+      if (settings.hasBeenConfigured == false) {
+        console.log("Error: Have not configured client.");
+        failureCount++;
+        return -1;
+      }
+
+      if (settings.updateValues.X == null) { //check if our device updated from the server
         console.log("Error: Update values have not been set.");
+        failureCount++;
         return -1;
       }
 
       if (socket == null) { //has the socket been created?
         console.log("Error Socket: Socket has not been set.");
+        failureCount++;
         return -1;
       }
 
       if (socket.readyState != WebSocket.OPEN) { //is the socket open?
-        console.log("Error Socket: Socket not ready.");
+        console.log("Warning Socket: Socket is not open.");
+        failureCount++;
         return -1;
       }
 
@@ -104,6 +165,7 @@ var phoneSocket = (function() {
         }
       }
 
+      failureCount = 0;
       //encode measurements here and send.
       socket.send(JSON.stringify(temp));
     }; //end sendUpdate
@@ -121,14 +183,14 @@ var phoneSocket = (function() {
 
       if (window && window.addEventListener) {
         window.addEventListener('devicemotion', function(e) {
-          measurements.x = e.x - calibration.x;
-          measurements.y = e.y - calibration.y;
-          measurements.z = e.z - calibration.z;
+          measurements.X = e.acceleration.x - calibration.X;
+          measurements.Y = e.acceleration.y - calibration.Y;
+          measurements.Z = e.acceleration.z - calibration.Z;
         }, false);
         window.addEventListener('deviceorientation', function(e) {
-          measurements.alpha = e.alpha - calibration.alpha;
-          measurements.beta = e.beta - calibration.beta;
-          measurements.gamma = e.gamma - calibration.gamma;
+          measurements.Alpha = e.alpha - calibration.Alpha;
+          measurements.Beta = e.beta - calibration.Beta;
+          measurements.Gamma = e.gamma - calibration.Gamma;
         }, false);
         return true;
       } else {
@@ -144,7 +206,7 @@ var phoneSocket = (function() {
     */
     function calibrateDevice() {
         for(var i in calibration) { //for each measurement
-          if (measurements != null) { //if the reading isnt null
+          if (measurements[i] != null) { //if the reading isnt null
             calibration[i] = measurements[i]; //set our calibration to the new reading
           } else {
             calibration[i] = 0; //otherwise, aka our measurement reading IS null then set measurments to 0.
@@ -163,7 +225,8 @@ var phoneSocket = (function() {
       if (err != true) {
         console.log('Device Error: Does not support DeviceOrientationEvent.');
         return false;
-      }      
+      } 
+      return true;     
     };
 
     /*
@@ -214,6 +277,10 @@ var phoneSocket = (function() {
     return {
       //public methods and variables
 
+      setLobbyID: function(newLobbyID) {
+        settings.lobbyID = newLobbyID;
+      },
+
       setServerAddress: function(newAddress) {
         serverAddress = newAddress;
       },
@@ -222,29 +289,37 @@ var phoneSocket = (function() {
         settings.frequency = newFreq;
       },
 
-      isBrowserSupported: function() {
+      checkBrowserSupport: function() {
         return checkBrowserSupport();
       },
 
+      measurements: function() {
+        return measurements;
+      },
+
+      calibration: function() {
+        return calibration;
+      },
+
+      recalibrateDevice: function() {
+        calibrateDevice();
+      },
+
       start: function() {
+        console.log("Creating Socket...");
         createSocket();
 
+        console.log("Binding polling.");
         var err = bindPolling();
         if (err != true) {
           console.log("Error: Could not bind.");
         }
 
-        calibrateDevice();
-
-        setInterval(sendUpdate, frequency);
-      },
-
-      measurements: {
-        x: null,
-        y: null,
-        alpha: null,
-        beta: null,
-        gamma: null
+        console.log("Calibrating device.");
+        setTimeout(calibrateDevice, 100); //wait 100ms (safe bet) and calibrate the device. Give the events a chance to fire.
+        
+        console.log("Starting updates to server.");
+        clientSendInterval = setInterval(sendUpdate, settings.frequency);
       }
     }; //end return inside init
 
