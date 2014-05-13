@@ -10,15 +10,14 @@ func lobbyController(thisLobby *lobby, deviceInChan chan deviceUpdate, desktopOu
 
 	go func() {
 		for {
-			<-desktopOutChan
-			//fmt.Println("SIMULATED SEND:", <-desktopOutChan)
+			temp := <-desktopOutChan
+			fmt.Println("SIMULATED SEND:", temp)
 		}
 	}()
 
 	for {
 		select {
 		case recievedData := <-deviceInChan:
-			fmt.Println("lobbyController: Recieved data - ", recievedData)
 			//doo something with recievedData here maybe smoothing etc...
 			desktopOutChan <- recievedData //send it out
 		}

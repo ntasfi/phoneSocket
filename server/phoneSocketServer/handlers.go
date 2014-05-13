@@ -31,7 +31,7 @@ func handleMobile(w http.ResponseWriter, req *http.Request) {
 		templateString := loadTemplate("mobile-no-code")
 		templ := template.Must(template.New("mobile-no-code").Parse(templateString))
 
-		templ.Execute(w, req.FormValue("lobbyCode"))
+		templ.Execute(w, req.FormValue("code"))
 	} else { //TODO: insert the code into the template.
 
 		templateString := loadTemplate("mobile")
@@ -118,11 +118,6 @@ func handleSocket(socketConnChan chan socketEntity, ws *websocket.Conn) {
 			fmt.Println("handleSocket: Recieved the handlerChan from the hub.")
 
 			clientSettings := <-tempLobbySettingsChan //this is where we would get the settings for our lobby and send it to the client.
-			fmt.Println(clientSettings)
-			// jsonData, err := json.Marshal(deviceLobbySettings{Settings: clientSettings})
-			// if err != nil {
-			// 	fmt.Println(err)
-			// }
 
 			if err := websocket.JSON.Send(ws, deviceLobbySettings{Settings: clientSettings}); err != nil {
 				fmt.Println("Error sending settings. Error:", err)
@@ -166,7 +161,7 @@ func handleSocket(socketConnChan chan socketEntity, ws *websocket.Conn) {
 
 		} else if initialRecievedEntity.IsDesktop == false { //its a device
 			var recievedUpdate deviceUpdate //setup holder vars
-			var rawJSONObjectMap map[string]*json.RawMessage
+			rawJSONObjectMap := make(map[string]*json.RawMessage)
 
 			recievedUpdate.measurments = make(map[string]float64)
 			recievedUpdate.deviceID = initialRecievedEntity.DeviceID
@@ -191,7 +186,6 @@ func handleSocket(socketConnChan chan socketEntity, ws *websocket.Conn) {
 				recievedUpdate.measurments[key] = value //set it
 			}
 
-			fmt.Printf("handleSocket: recievedUpdate - %v\n", recievedUpdate)
 			handlerChan <- recievedUpdate //send the update
 		} else {
 			fmt.Println("no idea how you got here")

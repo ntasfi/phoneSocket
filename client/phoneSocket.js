@@ -34,7 +34,7 @@ var phoneSocket = (function() {
       hasBeenConfigured: false,
       lobbyID: null,
       useWSS: false,
-      frequency: 1000,
+      frequency: 500,
       updateValues: {
         X: false,
         Y: false,
@@ -89,7 +89,7 @@ var phoneSocket = (function() {
         var recievedData = null;
 
         //the server sends two blobs to the client with different sizes. This might be PingFrames or connectFrames etc.
-        if (e.data.size) {
+        if (e.data.size) { //just a check for it
            recievedData = e.data;
         } else {
           recievedData = JSON.parse(e.data);  
@@ -98,6 +98,7 @@ var phoneSocket = (function() {
 
         if (recievedData['Error']) { //if we got a 
           console.log(recievedData['Error']);
+          alert(recievedData['Error']);
         } else if (recievedData['ping']) {
           console.log("Recieved a ping from server.")
         } else if (recievedData['Settings']) {
@@ -129,7 +130,7 @@ var phoneSocket = (function() {
     * 
     */
     function sendUpdate() {
-      if (failureCount > 100) {
+      if (failureCount > 50) { //threshold to cut out losses
         clearInterval(clientSendInterval);
         console.log("Cleared send interval. Reached max failure count.")
       }
@@ -161,7 +162,11 @@ var phoneSocket = (function() {
 
       for (val in settings.updateValues) { //for each value in updateValues
         if (settings.updateValues[val] == true) { //if its not equal to null, aka its important
-          temp[val] = measurements[val];
+          if (measurements[val] == null) {
+            temp[val] = 0;  //Mobile Chrome isnt ready as fast as Safari. So we need to just set it to zero.
+          } else {
+            temp[val] = measurements[val];
+          }
         }
       }
 
