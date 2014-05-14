@@ -10,8 +10,9 @@ func main() {
 	//channels!
 	var newLobbyChan = make(chan *lobby)         //all the new lobbies are sent over this to our hub to be registered
 	var socketConnChan = make(chan socketEntity) //the sockets send a channel to the hub with ID for their connection.
+	var killHubChan = make(chan entity)          //used to kill lobbies etc off. This is sockets to lobby ONLY.
 
-	go hub(newLobbyChan, socketConnChan) //spawn hub to keep track of the lobbies and answer queries about lobbies
+	go hub(newLobbyChan, socketConnChan, killHubChan) //spawn hub to keep track of the lobbies and answer queries about lobbies
 
 	http.Handle("/desktop", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +25,7 @@ func main() {
 
 	http.Handle("/websocket", websocket.Handler(
 		func(ws *websocket.Conn) {
-			handleSocket(socketConnChan, ws)
+			handleSocket(socketConnChan, killHubChan, ws)
 		}))
 
 	//if desktop send here

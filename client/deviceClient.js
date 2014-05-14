@@ -20,13 +20,13 @@ todo:
 
 //first one is the value of the measurement and the second is our basevalue aka calibration
 
-var phoneSocket = (function() {
+var deviceSocket = (function() {
   var instance;
 
   function init() { //private methods and variables
     
     var serverAddress = 'localhost:8080';
-    var clientSendInterval = null; //holds the interval timer object
+    var clientSendIntervalObj = null; //holds the interval timer object
     var socket = null; //connect to server
     var deviceID = guid(); //make a unique id for this device
     var failureCount = 0;
@@ -85,7 +85,7 @@ var phoneSocket = (function() {
       socket = new WebSocket(conType+"://"+serverAddress); //connect to server
       console.log("Socket created.");
       socket.onmessage = function(e) {
-        //set our values what to send over...
+        
         var recievedData = null;
 
         //the server sends two blobs to the client with different sizes. This might be PingFrames or connectFrames etc.
@@ -131,7 +131,7 @@ var phoneSocket = (function() {
     */
     function sendUpdate() {
       if (failureCount > 50) { //threshold to cut out losses
-        clearInterval(clientSendInterval);
+        clearInterval(clientSendIntervalObj);
         console.log("Cleared send interval. Reached max failure count.")
       }
       if (settings.hasBeenConfigured == false) {
@@ -324,7 +324,7 @@ var phoneSocket = (function() {
         setTimeout(calibrateDevice, 100); //wait 100ms (safe bet) and calibrate the device. Give the events a chance to fire.
         
         console.log("Starting updates to server.");
-        clientSendInterval = setInterval(sendUpdate, settings.frequency);
+        clientSendIntervalObj = setInterval(sendUpdate, settings.frequency);
       }
     }; //end return inside init
 

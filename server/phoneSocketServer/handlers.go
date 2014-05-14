@@ -66,15 +66,16 @@ func handleDesktop(newLobbyChan chan *lobby, w http.ResponseWriter, req *http.Re
 
 		newLobby.desktopOutChan = make(chan deviceUpdate)
 		newLobby.deviceInputChan = make(chan deviceUpdate)
+		newLobby.killChan = make(chan bool)
 
-		newLobbyChan <- newLobby                                                        //register the new lobby with the hub.
-		go lobbyController(newLobby, newLobby.deviceInputChan, newLobby.desktopOutChan) //start the new go process with the channels passed.
+		newLobbyChan <- newLobby                                                                           //register the new lobby with the hub.
+		go lobbyController(newLobby, newLobby.deviceInputChan, newLobby.desktopOutChan, newLobby.killChan) //start the new go process with the channels passed.
 
 		//need to update this template to have javascript etc. that connects and listens to the right channels
 		var templateString = loadTemplate("desktop")
 		templ := template.Must(template.New("desktop").Parse(templateString)) //render original page
 
-		templ.Execute(w, req.FormValue("nothing-like-me-exists"))
+		templ.ExecuteTemplate(w, "desktop", newLobby.id)
 	} else { //else no post
 		var templateString = loadTemplate("desktop-no-post")
 		templ := template.Must(template.New("desktop-no-post").Parse(templateString)) //render original page
@@ -83,7 +84,7 @@ func handleDesktop(newLobbyChan chan *lobby, w http.ResponseWriter, req *http.Re
 	}
 }
 
-func handleSocket(socketConnChan chan socketEntity, ws *websocket.Conn) {
+func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws *websocket.Conn) {
 	var message string
 	var initialRecievedEntity entity
 	var handlerChan (chan deviceUpdate)
@@ -117,10 +118,12 @@ func handleSocket(socketConnChan chan socketEntity, ws *websocket.Conn) {
 			handlerChan = tempChan //set it
 			fmt.Println("handleSocket: Recieved the handlerChan from the hub.")
 
-			clientSettings := <-tempLobbySettingsChan //this is where we would get the settings for our lobby and send it to the client.
-
-			if err := websocket.JSON.Send(ws, deviceLobbySettings{Settings: clientSettings}); err != nil {
-				fmt.Println("Error sending settings. Error:", err)
+			//update the client here if not desktop
+			if initialRecievedEntity.IsDesktop == false { //its a client
+				clientSettings := <-tempLobbySettingsChan //this is where we would get the settings for our lobby and send it to the client.
+				if err := websocket.JSON.Send(ws, deviceLobbySettings{Settings: clientSettings}); err != nil {
+					fmt.Println("Error sending settings. Error:", err)
+				}
 			}
 
 		case errMsgChan := <-tempErrorChan: //an error occured
@@ -136,39 +139,39 @@ func handleSocket(socketConnChan chan socketEntity, ws *websocket.Conn) {
 			}
 		} //end select
 
-		//update the client here if not desktop
-		if initialRecievedEntity.IsDesktop == false { //its a client
-
-		}
-
 	} //end check
 
 	//we test here to see if the websocket was closed.
 	if err := websocket.Message.Send(ws, []byte("{ping:true}")); err != nil {
 		fmt.Println("handleSocket: Websocket is closed.")
-		return //get the hell out of dodge
+		killHubChan <- initialRecievedEntity //kill this
+		return                               //get the hell out of dodge
 	}
 
-	for {
-		if initialRecievedEntity.IsDesktop {
-			data := <-handlerChan //take recieved values from channel
+	if initialRecievedEntity.IsDesktop {
+		for {
+			select {
+			case clientData := <-handlerChan:
+				if err := websocket.JSON.Send(ws, clientData); err != nil {
+					fmt.Println("Error occured:", err)
+					killHubChan <- initialRecievedEntity //kill this
+					return
+				}
+			} //end select
 
-			//send the data over to the desktop socket. Change the dataJson to a string type.
-			if err := websocket.JSON.Send(ws, data); err != nil {
-				fmt.Println("Error occured:", err)
-				return
-			}
-
-		} else if initialRecievedEntity.IsDesktop == false { //its a device
+		} //end for
+	} else if initialRecievedEntity.IsDesktop == false { //its a device
+		for {
 			var recievedUpdate deviceUpdate //setup holder vars
 			rawJSONObjectMap := make(map[string]*json.RawMessage)
 
-			recievedUpdate.measurments = make(map[string]float64)
-			recievedUpdate.deviceID = initialRecievedEntity.DeviceID
-			recievedUpdate.timestamp = time.Now().Unix()
+			recievedUpdate.Measurments = make(map[string]float64)
+			recievedUpdate.DeviceID = initialRecievedEntity.DeviceID
+			recievedUpdate.Timestamp = time.Now().Unix()
 
 			if err := websocket.Message.Receive(ws, &message); err != nil { //receive the message here from the device
 				fmt.Println("Error occured:", err)
+				killHubChan <- initialRecievedEntity //kill this
 				return
 			}
 
@@ -183,13 +186,13 @@ func handleSocket(socketConnChan chan socketEntity, ws *websocket.Conn) {
 				if err != nil {
 					fmt.Println(err)
 				}
-				recievedUpdate.measurments[key] = value //set it
+				recievedUpdate.Measurments[key] = value //set it
 			}
 
 			handlerChan <- recievedUpdate //send the update
-		} else {
-			fmt.Println("no idea how you got here")
 		}
+	} else {
+		fmt.Println("no idea how you got here")
+	}
 
-	} //end for
 }

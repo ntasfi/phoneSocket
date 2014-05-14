@@ -6,23 +6,23 @@
 <body>
 <h1>In lobby {{.}}</h1>
 </body>
-<script src="javascript/phoneSocket.js"></script>
+<script src="javascript/deviceClient.js"></script>
 <script>
 
-if (typeof phoneSocket != "undefined") {
-	var pS = phoneSocket.getInstance();
+if (typeof deviceSocket != "undefined") {
+	var dvS = deviceSocket.getInstance();
 
-	if (pS.checkBrowserSupport()) {
-		pS.setLobbyID("{{.}}");
-		pS.setServerAddress("10.0.1.75:8080/websocket");
-		pS.setFrequency(1500);
-		pS.start(); //kick it off
+	if (dvS.checkBrowserSupport()) {
+		dvS.setLobbyID("{{.}}");
+		dvS.setServerAddress("10.0.1.75:8080/websocket");
+		dvS.setFrequency(250);
+		dvS.start(); //kick it off
 	} else {
-		console.log(pS.isBrowserSupported());
+		console.log(dvS.isBrowserSupported());
 		console.log("Browser is not supported.");
 	}
 } else {
-	console.log("Could not find phoneSocket");
+	console.log("Could not find deviceSocket");
 }
 </script>
 </html>

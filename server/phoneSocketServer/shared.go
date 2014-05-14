@@ -23,9 +23,9 @@ type deviceErrorMessage struct {
 }
 
 type deviceUpdate struct {
-	deviceID    string
-	measurments map[string]float64
-	timestamp   int64
+	DeviceID    string
+	Measurments map[string]float64
+	Timestamp   int64
 }
 
 type lobby struct {
@@ -35,4 +35,5 @@ type lobby struct {
 	settings           map[string]bool
 	desktopOutChan     (chan deviceUpdate)
 	deviceInputChan    (chan deviceUpdate)
+	killChan           (chan bool)
 }
