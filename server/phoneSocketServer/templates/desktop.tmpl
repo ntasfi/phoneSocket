@@ -3,7 +3,7 @@
 <title>Desktop</title>
 </head>
 <body>
-<h1>Lobby {{.}}</h1> 
+<h1>Lobby {{.LobbyID}}</h1> 
 <textarea id="textUpdate" style="width: 750px; height: 400px; overflow: scroll"></textarea>
 <script src="javascript/desktopClient.js"></script>
 <script>
@@ -11,8 +11,8 @@
 if (typeof lobbySocket != "undefined") {
 	var lbS = lobbySocket.getInstance();
 
-	lbS.setLobbyID("{{.}}");
-	lbS.setServerAddress("10.0.1.75:8080/websocket");
+	lbS.setLobbyID("{{.LobbyID}}");
+	lbS.setServerAddress("{{.ServerAddress}}");
 	lbS.start(); //kick it off
 } else {
 	console.log("Could not find lobbySocket");

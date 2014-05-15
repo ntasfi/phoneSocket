@@ -8,6 +8,19 @@ import (
 	"net/http"
 )
 
+type DesktopNoPostTemplate struct {
+	FormAction string
+}
+
+type DesktopTemplate struct {
+	LobbyID       string
+	ServerAddress string
+}
+
+type MobileNoCodeTemplate struct {
+	FormAction string
+}
+
 type MobileTemplate struct {
 	LobbyID   string
 	ServerURL string

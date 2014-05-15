@@ -21,9 +21,14 @@ func handleMobile(w http.ResponseWriter, req *http.Request) {
 		templ := template.Must(template.New("mobile-no-code").Parse(templateString))
 
 		templ.Execute(w, req.FormValue("code"))
+
+		if err := createExecuteTemplate(w, "mobile-no-code", MobileNoCodeTemplate{FormAction: configuration.HTTPRoutes.Mobile}); err != nil {
+			fmt.Println(err)
+		}
+
 	} else { //TODO: insert the code into the template.
 
-		serverURL := fmt.Sprintf("%s:%d%s", "10.0.1.75", configuration.ServerPort, configuration.HTTPRoutes.Websocket)
+		serverURL := fmt.Sprintf("%s:%d%s", myAddress, configuration.ServerPort, configuration.HTTPRoutes.Websocket)
 		mobileTemplate := MobileTemplate{LobbyID: code, ServerURL: serverURL, Frequency: configuration.Mobile.DefaultUpdateFrequencyMilliseconds}
 
 		if err := createExecuteTemplate(w, "mobile", mobileTemplate); err != nil {
@@ -59,20 +64,13 @@ func handleDesktop(newLobbyChan chan *lobby, w http.ResponseWriter, req *http.Re
 		newLobbyChan <- newLobby                                                                           //register the new lobby with the hub.
 		go lobbyController(newLobby, newLobby.deviceInputChan, newLobby.desktopOutChan, newLobby.killChan) //start the new go process with the channels passed.
 
-		//need to update this template to have javascript etc. that connects and listens to the right channels
-		// var templateString = loadTemplate("desktop")
-		// templ := template.Must(template.New("desktop").Parse(templateString)) //render original page
-
-		// templ.ExecuteTemplate(w, "desktop", newLobby.id)
-		if err := createExecuteTemplate(w, "desktop", newLobby.id); err != nil {
+		serverURL := fmt.Sprintf("%s:%d%s", myAddress, configuration.ServerPort, configuration.HTTPRoutes.Websocket)
+		if err := createExecuteTemplate(w, "desktop", DesktopTemplate{LobbyID: newLobby.id, ServerAddress: serverURL}); err != nil {
 			fmt.Print(err)
 		}
 	} else { //else no post
-		// var templateString = loadTemplate("desktop-no-post")
-		// templ := template.Must(template.New("desktop-no-post").Parse(templateString)) //render original page
 
-		// templ.Execute(w, req.FormValue("nothing-like-me-exists"))
-		if err := createExecuteTemplate(w, "desktop-no-post", nil); err != nil {
+		if err := createExecuteTemplate(w, "desktop-no-post", DesktopNoPostTemplate{FormAction: configuration.HTTPRoutes.Desktop}); err != nil {
 			fmt.Println(err)
 		}
 	}
@@ -90,9 +88,10 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 	}
 
 	//its the first connect
-	//TODO: make this less sloppy.
+
 	fmt.Println("handleSocket: Message -", message)
 
+	//TODO: make this less sloppy.
 	if match, _ := regexp.MatchString("IsDesktop", message); match == true {
 		fmt.Println("handleSocket: Handling the first message from client.")
 		err := json.Unmarshal([]byte(message), &initialRecievedEntity)
