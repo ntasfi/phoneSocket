@@ -91,7 +91,7 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 
 	//get the first message
 	if err := websocket.Message.Receive(ws, &message); err != nil { //receive the message here
-		fmt.Println("Error occured:", err)
+		fmt.Println("handleSocket:", err)
 		return
 	}
 
@@ -130,7 +130,7 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 			deviceErrMsg := deviceErrorMessage{Error: errMsgChan, Timestamp: time.Now().Unix()}
 
 			if err := websocket.JSON.Send(ws, deviceErrMsg); err != nil {
-				fmt.Println("Error occured:", err)
+				fmt.Println("handleSocket", err)
 			}
 
 			//close the connection
@@ -149,6 +149,7 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 	}
 
 	if initialRecievedEntity.IsDesktop {
+		timer := time.After(5 * time.Minute) //Lobbies are destroyed after 5 minutes of inactivity initially.
 		for {
 			select {
 			case clientData := <-handlerChan:
@@ -157,8 +158,11 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 					killHubChan <- initialRecievedEntity //kill this
 					return
 				}
+			case <-timer:
+				killHubChan <- initialRecievedEntity
+				return
 			} //end select
-
+			timer = time.After(5 * time.Second) //after we get a single update this is our new timer.
 		} //end for
 	} else if initialRecievedEntity.IsDesktop == false { //its a device
 		for {
@@ -195,4 +199,4 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 		fmt.Println("no idea how you got here")
 	}
 
-}
+} //end handleSocket

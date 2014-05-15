@@ -15,9 +15,9 @@ func lobbyController(thisLobby *lobby, deviceInChan chan deviceUpdate, desktopOu
 			desktopOutChan <- recievedData //send it out
 		case isDead := <-killChan:
 			if isDead {
+				fmt.Println("lobbyController: Killing lobby", thisLobby.id)
 				return
 			}
 		}
-	}
-	fmt.Println("lobbyID", thisLobby.id, "closed.")
-}
+	} //end for
+} //end lobbyController

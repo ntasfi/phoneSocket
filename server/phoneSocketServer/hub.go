@@ -42,7 +42,7 @@ func hub(newLobbyChan chan *lobby, socketConnChan chan socketEntity, killHubChan
 				currentLobbies[killThis.LobbyID].killChan <- true //we are killing the lobby
 				delete(currentLobbies, killThis.LobbyID)          //remove the lobby from memory
 				fmt.Println("Hub: Lobby removed. There are now", len(currentLobbies), "lobbies.")
-			} else if killThis.IsDesktop == false { //a client has been killed
+			} else if _, ok := currentLobbies[killThis.LobbyID]; killThis.IsDesktop == false && ok { //a client has been killed
 				currentLobbies[killThis.LobbyID].currentNumberUsers -= 1
 				fmt.Println("Hub: There are", currentLobbies[killThis.LobbyID].currentNumberUsers, "users connected in lobby", killThis.LobbyID)
 			} else {

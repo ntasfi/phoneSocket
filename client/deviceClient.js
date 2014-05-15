@@ -134,6 +134,7 @@ var deviceSocket = (function() {
         clearInterval(clientSendIntervalObj);
         console.log("Cleared send interval. Reached max failure count.")
       }
+
       if (settings.hasBeenConfigured == false) {
         console.log("Error: Have not configured client.");
         failureCount++;
@@ -156,6 +157,10 @@ var deviceSocket = (function() {
         console.log("Warning Socket: Socket is not open.");
         failureCount++;
         return -1;
+      }
+
+      if (calibration.Alpha == 0 || calibration.X == 0) {
+        calibrateDevice();
       }
 
       var temp = {};
@@ -196,6 +201,7 @@ var deviceSocket = (function() {
           measurements.Alpha = e.alpha - calibration.Alpha;
           measurements.Beta = e.beta - calibration.Beta;
           measurements.Gamma = e.gamma - calibration.Gamma;
+          updateVisual(measurements.Alpha, measurements.Beta, measurements.Gamma); //update our pretty visuals
         }, false);
         return true;
       } else {
@@ -279,54 +285,71 @@ var deviceSocket = (function() {
       }
     }; //end supportsDeviceOrientation
 
-    return {
-      //public methods and variables
+    function updateVisual(alpha, beta, gamma) {
+      document.getElementById("doDirection").innerHTML = Math.round(alpha);
+      document.getElementById("doTiltFB").innerHTML = Math.round(beta);
+      document.getElementById("doTiltLR").innerHTML = Math.round(gamma);
+      
+      
 
-      setLobbyID: function(newLobbyID) {
-        settings.lobbyID = newLobbyID;
-      },
+      // Apply the transform to the image
+      var logo = document.getElementById("imgLogo");
+      // logo.style.webkitTransform =
+      //   "rotate("+ alpha*-1 +"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,0,1, "+ (gamma*-1)+"deg)";
+      //  rotate - frontBack - roll
+      logo.style.MozTransform = "rotate("+ alpha*-1 +"deg)";
+      logo.style.webkitTransform = "rotate3d(0,0,1, "+ (alpha)+"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,1,0, "+ (gamma)+"deg)";
+      logo.style.transform = "rotate3d(0,0,1, "+ (alpha)+"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,1,0, "+ (gamma)+"deg)";
+    };
 
-      setServerAddress: function(newAddress) {
-        serverAddress = newAddress;
-      },
+  return {
+    //public methods and variables
 
-      setFrequency: function(newFreq) {
-        settings.frequency = newFreq;
-      },
+    setLobbyID: function(newLobbyID) {
+      settings.lobbyID = newLobbyID;
+    },
 
-      checkBrowserSupport: function() {
-        return checkBrowserSupport();
-      },
+    setServerAddress: function(newAddress) {
+      serverAddress = newAddress;
+    },
 
-      measurements: function() {
-        return measurements;
-      },
+    setFrequency: function(newFreq) {
+      settings.frequency = newFreq;
+    },
 
-      calibration: function() {
-        return calibration;
-      },
+    checkBrowserSupport: function() {
+      return checkBrowserSupport();
+    },
 
-      recalibrateDevice: function() {
-        calibrateDevice();
-      },
+    measurements: function() {
+      return measurements;
+    },
 
-      start: function() {
-        console.log("Creating Socket...");
-        createSocket();
+    calibration: function() {
+      return calibration;
+    },
 
-        console.log("Binding polling.");
-        var err = bindPolling();
-        if (err != true) {
-          console.log("Error: Could not bind.");
-        }
+    recalibrateDevice: function() {
+      calibrateDevice();
+    },
 
-        console.log("Calibrating device.");
-        setTimeout(calibrateDevice, 100); //wait 100ms (safe bet) and calibrate the device. Give the events a chance to fire.
-        
-        console.log("Starting updates to server.");
-        clientSendIntervalObj = setInterval(sendUpdate, settings.frequency);
+    start: function() {
+      console.log("Creating Socket...");
+      createSocket();
+
+      console.log("Binding polling.");
+      var err = bindPolling();
+      if (err != true) {
+        console.log("Error: Could not bind.");
       }
-    }; //end return inside init
+
+      console.log("Calibrating device.");
+      setTimeout(calibrateDevice, 200); //wait 200ms (safe bet) and calibrate the device. Give the events a chance to fire.
+      
+      console.log("Starting updates to server.");
+      clientSendIntervalObj = setInterval(sendUpdate, settings.frequency);
+    }
+  }; //end return inside init
 
   }; //end init
 

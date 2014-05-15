@@ -26,8 +26,22 @@ var lobbySocket = (function(){
 		var failureCount = 0;
 		var events = {};
 		var settings = {
+			clientTimeoutAmount: 5000, //5 seconds
 			lobbyID: null,
 			useWSS: false
+		};
+
+
+		var clients = {
+			// "device-guid-here": {
+			// 	"playerNumber": 1,
+			//  "timestamp": 1234567890
+			// 	measurments : {
+			// 	"X": 123,
+			// 	"Y": 456,
+			// 	"Z": 789
+			// 	}
+			// },
 		};
 
 		function createSocket() {
@@ -45,22 +59,27 @@ var lobbySocket = (function(){
 			  } else {
 			  	document.getElementById("textUpdate").value = e.data + "\n" + document.getElementById("textUpdate").value
 			  }
-			  // var recievedData = null;
-			  // //the server sends two blobs to the client with different sizes. This might be PingFrames or connectFrames etc.
-			  // if (e.data.size) { //just a check for it
-			  //    recievedData = e.data;
-			  // } else {
-			  //   recievedData = JSON.parse(e.data);  
-			  // }
-			  
-			  console.log(e.data);
-			  //recieve update.
-			  //check if key exists in measurments for each client.
-			  	//if it does then update whatever was sent over
-			  		//done
-			  	//if not then add it and update with whatever was sent over
 
-			  //trigger a message	
+			  var recievedData = null;
+			  //the server sends two blobs to the client with different sizes. This might be PingFrames or connectFrames etc.
+			  if (e.data.size) { //just a check for it
+			     return //thats it
+			  } else {
+			    recievedData = JSON.parse(e.data);  //recieve update.
+			  }
+			  
+			  var key = recievedData['DeviceID']; //cleaner
+
+			  if (!clients.hasOwnProperty(key)) { //create
+			  	clients[key] = {};
+			  	clients[key]['playerNumber'] = Object.keys(clients).length; //we just added one in so we are good. (created object!)
+			  }
+
+			  //these two will always be updated
+			  clients[key]['measurments'] = recievedData['Measurments'];
+			  clients[key]['timestamp'] = recievedData['Timestamp'];
+			  clients[key]['clientTimeout'] = setTimeout(clientTimeout(key), settings.clientTimeoutAmount); //cleans up if they dont do anything
+			  
 
 			} //end onmessage
 
@@ -75,9 +94,20 @@ var lobbySocket = (function(){
 			}//end onopen
 		};
 
+		function clientTimeout(DeviceID) {
+			delete clients[DeviceID]; //delete it
+			if (Object.keys(clients).length > 0) { //lower the player numbers
+				for(var key in clients) {
+					clients[key].playerNumber = clients[key].playerNumber == 1 ? 1 : clients[key].playerNumber - 1; 
+				}
+			}
+		};
+
 		return { //public methods and variables
 
 			//measurments: {/*this will be filled in as events trickle in*/},
+
+			currentPlayers: clients,
 
 			setLobbyID: function(newLobbyID) {
 				settings.lobbyID = newLobbyID;

@@ -23,6 +23,8 @@ func main() {
 
 	http.Handle("/javascript/", http.StripPrefix("/javascript/", http.FileServer(http.Dir("../../client/"))))
 
+	http.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("./templates/images/"))))
+
 	http.Handle("/websocket", websocket.Handler(
 		func(ws *websocket.Conn) {
 			handleSocket(socketConnChan, killHubChan, ws)
