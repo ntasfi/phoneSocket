@@ -1,0 +1,28 @@
+{
+	"ServerAddress": "",
+	"ServerPort": 8080,
+	"HTTPRoutes": {
+		"Desktop": "/",
+		"Mobile": "/m",
+		"Websocket": "/websocket",
+		"Javascript": {
+			"Route": "/javascript/",
+			"RootLocation": "../../client/"
+		},
+		"Images": {
+			"Route": "/images/",
+			"RootLocation": "./templates/images/"
+		}
+	},
+	"Template": {
+		"RootLocation": "templates/",
+		"Extension": "tmpl"
+	},
+	"Lobby": {
+		"InactivityNoActivityMinutes": 5,
+		"InactivityAfterActivitySeconds": 5
+	},
+	"Mobile": {
+		"DefaultUpdateFrequencyMilliseconds": 750
+	}	
+}

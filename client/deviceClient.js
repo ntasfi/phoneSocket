@@ -121,7 +121,7 @@ var deviceSocket = (function() {
           IsDesktop: false,
         };
         socket.send(JSON.stringify(entity)); //let the server know this is our first connection.
-      }
+      } //end onopen
     };
 
     /*
@@ -289,17 +289,14 @@ var deviceSocket = (function() {
       document.getElementById("doDirection").innerHTML = Math.round(alpha);
       document.getElementById("doTiltFB").innerHTML = Math.round(beta);
       document.getElementById("doTiltLR").innerHTML = Math.round(gamma);
-      
-      
+
 
       // Apply the transform to the image
       var logo = document.getElementById("imgLogo");
-      // logo.style.webkitTransform =
-      //   "rotate("+ alpha*-1 +"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,0,1, "+ (gamma*-1)+"deg)";
       //  rotate - frontBack - roll
       logo.style.MozTransform = "rotate("+ alpha*-1 +"deg)";
-      logo.style.webkitTransform = "rotate3d(0,0,1, "+ (alpha)+"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,1,0, "+ (gamma)+"deg)";
-      logo.style.transform = "rotate3d(0,0,1, "+ (alpha)+"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,1,0, "+ (gamma)+"deg)";
+      logo.style.webkitTransform = "rotate3d(0,0,1, "+ (alpha*-1)+"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,1,0, "+ (gamma)+"deg)";
+      logo.style.transform = "rotate3d(0,0,1, "+ (alpha*-1)+"deg) rotate3d(1,0,0, "+ (beta*-1)+"deg) rotate3d(0,1,0, "+ (gamma)+"deg)";
     };
 
   return {

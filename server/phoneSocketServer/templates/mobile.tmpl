@@ -1,16 +1,63 @@
 <html>
 <head>
+<meta name="viewport" content="width=device-width">
 <title>Mobile</title>
+<style>
+div.container {
+  position: absolute;
+  top: 30%;
+  left: 37%;
+  margin: 0px;
+  padding: 0px;
+}
 
+div.h2 {
+  margin-top: 2px;
+}
+
+div.main {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  text-decoration: none;
+  background-color: none;
+  color: darkgrey;
+  padding: 5px;
+  border: 1.5px solid lightgrey;
+}
+
+#recalibrateDevice {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  text-decoration: none;
+  font-size: 24px;
+  background-color: lightgrey;
+  color: white;
+  font-weight: bolder;
+  padding: 5px;
+}
+
+table {
+  color: grey;
+}
+</style>
 </head>
 <body>
-<h1>In lobby {{.}}</h1>
 <div class="main">
-  <h2>Device Orientation</h2>
+  <h2>Debug Information</h2>
   <table>
     <tr>
-      <td>Event Supported</td>
-      <td id="doEvent"></td>
+      <td>Server Address</td>
+      <td>{{.ServerURL}}</td>
+    </tr>
+    <tr>
+      <td>Lobby ID</td>
+      <td>{{.LobbyID}}</td>
+    </tr>
+    <tr>
+      <td>Update Frequency</td>
+      <td>{{.Frequency}}</td>
     </tr>
     <tr>
       <td>Tilt Left/Right [gamma]</td>
@@ -27,6 +74,8 @@
    </table>
 </div>
 
+<a href="#" onclick="dvS.recalibrateDevice()" id="recalibrateDevice">Recalibrate Device</a>
+
 <div class="container">
   <img src="images/phone.png" id="imgLogo" class="logo">
 </div>
@@ -39,9 +88,9 @@ if (typeof deviceSocket != "undefined") {
 	var dvS = deviceSocket.getInstance();
 
 	if (dvS.checkBrowserSupport()) {
-		dvS.setLobbyID("{{.}}");
-		dvS.setServerAddress("10.0.1.75:8080/websocket");
-		dvS.setFrequency(250);
+		dvS.setLobbyID("{{.LobbyID}}");
+		dvS.setServerAddress("{{.ServerURL}}");
+		dvS.setFrequency({{.Frequency}});
 		dvS.start(); //kick it off
 	} else {
 		console.log(dvS.isBrowserSupported());

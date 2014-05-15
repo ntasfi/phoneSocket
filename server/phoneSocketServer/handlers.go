@@ -5,22 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
 	"time"
 )
-
-//reads the template file and returns a string of it.
-func loadTemplate(templateName string) string {
-	contents, err := ioutil.ReadFile("templates/" + templateName + ".tmpl")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return string(contents)
-}
 
 func handleMobile(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("handleMobile: Request recieved.")
@@ -34,11 +23,10 @@ func handleMobile(w http.ResponseWriter, req *http.Request) {
 		templ.Execute(w, req.FormValue("code"))
 	} else { //TODO: insert the code into the template.
 
-		templateString := loadTemplate("mobile")
-		templ := template.Must(template.New("mobile").Parse(templateString))
-		err := templ.ExecuteTemplate(w, "mobile", code) //TODO: look into other ways of doing this.
-		if err != nil {
-			//log.Fatal(err)
+		serverURL := fmt.Sprintf("%s:%d%s", "10.0.1.75", configuration.ServerPort, configuration.HTTPRoutes.Websocket)
+		mobileTemplate := MobileTemplate{LobbyID: code, ServerURL: serverURL, Frequency: configuration.Mobile.DefaultUpdateFrequencyMilliseconds}
+
+		if err := createExecuteTemplate(w, "mobile", mobileTemplate); err != nil {
 			fmt.Println(err)
 		}
 
@@ -72,15 +60,21 @@ func handleDesktop(newLobbyChan chan *lobby, w http.ResponseWriter, req *http.Re
 		go lobbyController(newLobby, newLobby.deviceInputChan, newLobby.desktopOutChan, newLobby.killChan) //start the new go process with the channels passed.
 
 		//need to update this template to have javascript etc. that connects and listens to the right channels
-		var templateString = loadTemplate("desktop")
-		templ := template.Must(template.New("desktop").Parse(templateString)) //render original page
+		// var templateString = loadTemplate("desktop")
+		// templ := template.Must(template.New("desktop").Parse(templateString)) //render original page
 
-		templ.ExecuteTemplate(w, "desktop", newLobby.id)
+		// templ.ExecuteTemplate(w, "desktop", newLobby.id)
+		if err := createExecuteTemplate(w, "desktop", newLobby.id); err != nil {
+			fmt.Print(err)
+		}
 	} else { //else no post
-		var templateString = loadTemplate("desktop-no-post")
-		templ := template.Must(template.New("desktop-no-post").Parse(templateString)) //render original page
+		// var templateString = loadTemplate("desktop-no-post")
+		// templ := template.Must(template.New("desktop-no-post").Parse(templateString)) //render original page
 
-		templ.Execute(w, req.FormValue("nothing-like-me-exists"))
+		// templ.Execute(w, req.FormValue("nothing-like-me-exists"))
+		if err := createExecuteTemplate(w, "desktop-no-post", nil); err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
@@ -149,20 +143,28 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 	}
 
 	if initialRecievedEntity.IsDesktop {
-		timer := time.After(5 * time.Minute) //Lobbies are destroyed after 5 minutes of inactivity initially.
+		timer := time.After(configuration.Lobby.InactivityNoActivityMinutes * time.Minute) //Lobbies are destroyed after 5 minutes of inactivity initially.
+		var isDead = false
 		for {
 			select {
 			case clientData := <-handlerChan:
 				if err := websocket.JSON.Send(ws, clientData); err != nil {
 					fmt.Println("Error occured:", err)
 					killHubChan <- initialRecievedEntity //kill this
-					return
+					isDead = true                        //not sure if needed
 				}
 			case <-timer:
 				killHubChan <- initialRecievedEntity
-				return
+				isDead = true //not sure if needed
 			} //end select
-			timer = time.After(5 * time.Second) //after we get a single update this is our new timer.
+			if isDead {
+				if err := ws.Close(); err != nil {
+					fmt.Print(err)
+				}
+				fmt.Println("handlers: Desktop socket killed.")
+				break
+			}
+			timer = time.After(configuration.Lobby.InactivityAfterActivitySeconds * time.Second) //after we get a single update this is our new timer.
 		} //end for
 	} else if initialRecievedEntity.IsDesktop == false { //its a device
 		for {

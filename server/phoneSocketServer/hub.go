@@ -40,7 +40,8 @@ func hub(newLobbyChan chan *lobby, socketConnChan chan socketEntity, killHubChan
 		case killThis := <-killHubChan:
 			if killThis.IsDesktop { //if its the desktop that died...
 				currentLobbies[killThis.LobbyID].killChan <- true //we are killing the lobby
-				delete(currentLobbies, killThis.LobbyID)          //remove the lobby from memory
+				//close the killChan for this lobby
+				delete(currentLobbies, killThis.LobbyID) //remove the lobby from memory
 				fmt.Println("Hub: Lobby removed. There are now", len(currentLobbies), "lobbies.")
 			} else if _, ok := currentLobbies[killThis.LobbyID]; killThis.IsDesktop == false && ok { //a client has been killed
 				currentLobbies[killThis.LobbyID].currentNumberUsers -= 1
