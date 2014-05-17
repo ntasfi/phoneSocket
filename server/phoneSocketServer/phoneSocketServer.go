@@ -7,10 +7,11 @@ import (
 	"net/http"
 )
 
-var myAddress = "10.0.1.75" //find a better way to find this...maybe create a function that finds out external ip?
+var myAddress = findIpAddress() //find a better way to find this...maybe create a function that finds out external ip?
 var configuration = readConfiguration("configuration.json")
 
 func main() {
+	fmt.Println(myAddress)
 	var serverURI = fmt.Sprintf("%s:%d", configuration.ServerAddress, configuration.ServerPort)
 
 	//communcation settings

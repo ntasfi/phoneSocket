@@ -39,6 +39,7 @@ var lobbySocket = (function(){
 			}
 			socket = new WebSocket(conType+"://"+serverAddress); //connect to server
 			console.log("Socket created.");
+
 			socket.onmessage = function(e) {
 
 			  var recievedData = null;
@@ -94,9 +95,43 @@ var lobbySocket = (function(){
 
 		return { //public methods and variables
 
-			//measurments: {/*this will be filled in as events trickle in*/},
+			clients: clients,
 
-			currentPlayers: clients,
+      //returns a list of all deviceIDs in an array
+      currentDeviceIDs: function() {
+        var temp = [];
+        for(var key in clients) {
+          temp.push(key);
+        }
+        return temp
+      },
+
+      //returns the number of players present in the lobby
+      numberOfPlayers: function() {
+        return Object.keys(clients).length
+      },
+
+      //gets the measurments of a device by its playerNumber. Returns the object.
+      measurmentsByPlayerNumber: function(playerNumber) {
+        var temp = -1;
+        for(var key in clients) {
+          if (clients[key]['playerNumber'] == playerNumber) {
+            temp = clients[key]['measurments'];
+          } 
+        }
+        return temp
+      },
+
+      //gets the measurments of a device by its deviceID. Returns the object.
+      measurmentsByDeviceID: function(deviceID) {
+        var temp = -1;
+        for(var key in clients) {
+          if (key == deviceID) {
+            temp = clients[key]['measurments'];
+          } 
+        }
+        return temp
+      },
 
 			setLobbyID: function(newLobbyID) {
 				settings.lobbyID = newLobbyID;
@@ -107,7 +142,7 @@ var lobbySocket = (function(){
 			},
 
 			start: function() {
-				//create events
+				//create events?
 				
 				console.log("Creating Socket...");
         		createSocket();

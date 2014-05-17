@@ -28,8 +28,9 @@ var deviceSocket = (function() {
     var serverAddress = 'localhost:8080';
     var clientSendIntervalObj = null; //holds the interval timer object
     var socket = null; //connect to server
-    var deviceID = guid(); //make a unique id for this device
+    var deviceID = null; //make a unique id for this device
     var failureCount = 0;
+    var supportsLocalStorage = false;
     var settings = {
       hasBeenConfigured: false,
       lobbyID: null,
@@ -285,6 +286,42 @@ var deviceSocket = (function() {
       }
     }; //end supportsDeviceOrientation
 
+    /*
+      Checks if the device supports localStorage. 
+      Returns true or false.
+    */
+    function doesDeviceSupportLocalStorage() {
+      var doesDeviceSupport = false;
+      if(typeof(Storage)!=="undefined") {
+        doesDeviceSupport = true;
+      }
+      return doesDeviceSupport;
+    };
+
+    /*
+      Looks for a previous guid in localStorage. If not then it creates a localStorage object with a guid.
+    */
+    function checkPreviousGuid() {
+      if(doesDeviceSupportLocalStorage) {
+        if(localStorage.guid) {//does it exist?
+          console.log("GUID found.");
+          deviceID = localStorage.guid;
+        } else {
+          console.log("GUID not found. Creating and saving.")
+          deviceID = guid();
+          localStorage.guid = deviceID;
+        }
+      } else {
+        console.log("Device does not support localStorage.");
+        deviceID = guid(); //always generate one
+        //could use a cookie as a fallback!
+        //TODO: Cookie storage!!!
+      }
+    };
+
+    /*
+      Updates visuals on the page. This is optional. Did it as a debugging tool for myself.
+    */
     function updateVisual(alpha, beta, gamma) {
       document.getElementById("doDirection").innerHTML = Math.round(alpha);
       document.getElementById("doTiltFB").innerHTML = Math.round(beta);
@@ -343,6 +380,9 @@ var deviceSocket = (function() {
       console.log("Calibrating device.");
       setTimeout(calibrateDevice, 200); //wait 200ms (safe bet) and calibrate the device. Give the events a chance to fire.
       
+      console.log("Checking for previous GUID.")
+      checkPreviousGuid();
+
       console.log("Starting updates to server.");
       clientSendIntervalObj = setInterval(sendUpdate, settings.frequency);
     }
