@@ -210,6 +210,12 @@ var deviceSocket = (function() {
       }
     }; //end bindPolling
 
+    function clearCalibrations() {
+        //clear
+        for(var i in calibration) {
+          calibration[i] = 0;
+        }
+    }
 
     /*
     *
@@ -217,6 +223,7 @@ var deviceSocket = (function() {
     *
     */
     function calibrateDevice() {
+        //a new update should happen now.
         for(var i in calibration) { //for each measurement
           if (measurements[i] != null) { //if the reading isnt null
             calibration[i] = measurements[i]; //set our calibration to the new reading
@@ -327,6 +334,9 @@ var deviceSocket = (function() {
       document.getElementById("doTiltFB").innerHTML = Math.round(beta);
       document.getElementById("doTiltLR").innerHTML = Math.round(gamma);
 
+      document.getElementById("alphaCali").innerHTML = Math.round(calibration['Alpha']);
+      document.getElementById("betaCali").innerHTML = Math.round(calibration['Beta']);
+      document.getElementById("gammaCali").innerHTML = Math.round(calibration['Gamma']);
 
       // Apply the transform to the image
       var logo = document.getElementById("imgLogo");
@@ -364,7 +374,8 @@ var deviceSocket = (function() {
     },
 
     recalibrateDevice: function() {
-      calibrateDevice();
+      clearCalibrations();
+      setTimeout(calibrateDevice, 15); //not sure what to do set the wait for. We NEED another event to fire before setting it again.
     },
 
     start: function() {
