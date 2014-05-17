@@ -30,8 +30,7 @@ type Configuration struct {
 }
 
 type HTTPRouteConfiguration struct {
-	Desktop    string
-	Mobile     string
+	Root       string
 	Websocket  string
 	Javascript FileRouteConfiguration
 	Images     FileRouteConfiguration

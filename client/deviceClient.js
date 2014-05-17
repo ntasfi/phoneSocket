@@ -123,6 +123,10 @@ var deviceSocket = (function() {
         };
         socket.send(JSON.stringify(entity)); //let the server know this is our first connection.
       } //end onopen
+
+      socket.onclose = function() {
+        console.log("WebSocket has been closed.");
+      }
     };
 
     /*
@@ -375,7 +379,7 @@ var deviceSocket = (function() {
 
     recalibrateDevice: function() {
       clearCalibrations();
-      setTimeout(calibrateDevice, 15); //not sure what to do set the wait for. We NEED another event to fire before setting it again.
+      setTimeout(calibrateDevice, 30); //not sure what to do set the wait for. We NEED another event to fire before setting it again.
     },
 
     start: function() {

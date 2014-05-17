@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 )
 
 var myAddress = findIpAddress() //find a better way to find this...maybe create a function that finds out external ip?
@@ -13,6 +14,7 @@ var configuration = readConfiguration("configuration.json")
 func main() {
 	fmt.Println(myAddress)
 	var serverURI = fmt.Sprintf("%s:%d", configuration.ServerAddress, configuration.ServerPort)
+	var isMobile = regexp.MustCompile(`(M|m)obile|(I|i)P(hone|od|ad)|(A|a)ndroid|(B|b)lackBerry|(I|i)EMobile|(K|k)indle|(N|n)etFront|(S|s)ilk-Accelerated|(hpw|web)OS|(F|f)ennec|(M|m)inimo|(O|o)pera (M|m)(obi|ini)|(B|b)lazer|(D|d)olfin|(D|d)olphin|(S|s)kyfire|(Z|z)une`)
 
 	//communcation settings
 	var newLobbyChan = make(chan *lobby)         //all the new lobbies are sent over this to our hub to be registered
@@ -21,12 +23,15 @@ func main() {
 
 	go hub(newLobbyChan, socketConnChan, killHubChan) //spawn hub to keep track of the lobbies and answer queries about lobbies
 
-	http.Handle(configuration.HTTPRoutes.Desktop, http.HandlerFunc(
+	http.Handle(configuration.HTTPRoutes.Root, http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			handleDesktop(newLobbyChan, w, r)
-		}))
+			if isMobile.MatchString(r.UserAgent()) { //if its a mobile user
+				handleMobile(w, r)
+			} else {
+				handleDesktop(newLobbyChan, w, r)
+			}
 
-	http.Handle(configuration.HTTPRoutes.Mobile, http.HandlerFunc(handleMobile))
+		}))
 
 	http.Handle(configuration.HTTPRoutes.Javascript.Route, http.StripPrefix(configuration.HTTPRoutes.Javascript.Route, http.FileServer(http.Dir(configuration.HTTPRoutes.Javascript.RootLocation))))
 

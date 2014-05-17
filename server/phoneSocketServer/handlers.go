@@ -8,12 +8,13 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
 func handleMobile(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("handleMobile: Request recieved.")
-	code := req.URL.Query().Get("code") //TODO: sanitize
+	code := strings.TrimPrefix(req.RequestURI, "/") //remove the '/' from the start. //TODO: sanitize
 	//TODO: check if code is valid against current lobbys
 	if code == "" { //TODO: better what to check this...maybe check if not valid.
 		fmt.Println("handleMobile: No code given.")
@@ -22,7 +23,7 @@ func handleMobile(w http.ResponseWriter, req *http.Request) {
 
 		templ.Execute(w, req.FormValue("code"))
 
-		if err := createExecuteTemplate(w, "mobile-no-code", MobileNoCodeTemplate{FormAction: configuration.HTTPRoutes.Mobile}); err != nil {
+		if err := createExecuteTemplate(w, "mobile-no-code", MobileNoCodeTemplate{FormAction: configuration.HTTPRoutes.Root}); err != nil {
 			fmt.Println(err)
 		}
 
@@ -65,12 +66,12 @@ func handleDesktop(newLobbyChan chan *lobby, w http.ResponseWriter, req *http.Re
 		go lobbyController(newLobby, newLobby.deviceInputChan, newLobby.desktopOutChan, newLobby.killChan) //start the new go process with the channels passed.
 
 		serverURL := fmt.Sprintf("%s:%d%s", myAddress, configuration.ServerPort, configuration.HTTPRoutes.Websocket)
-		if err := createExecuteTemplate(w, "desktop", DesktopTemplate{LobbyID: newLobby.id, ServerAddress: serverURL}); err != nil {
+		mobileURL := fmt.Sprintf("%s:%d/%s", myAddress, configuration.ServerPort, newLobby.id)
+		if err := createExecuteTemplate(w, "desktop", DesktopTemplate{LobbyID: newLobby.id, ServerAddress: serverURL, MobileAddress: mobileURL}); err != nil {
 			fmt.Print(err)
 		}
 	} else { //else no post
-
-		if err := createExecuteTemplate(w, "desktop-no-post", DesktopNoPostTemplate{FormAction: configuration.HTTPRoutes.Desktop}); err != nil {
+		if err := createExecuteTemplate(w, "desktop-no-post", DesktopNoPostTemplate{FormAction: configuration.HTTPRoutes.Root}); err != nil {
 			fmt.Println(err)
 		}
 	}

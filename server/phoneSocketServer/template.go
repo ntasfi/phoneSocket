@@ -15,6 +15,7 @@ type DesktopNoPostTemplate struct {
 type DesktopTemplate struct {
 	LobbyID       string
 	ServerAddress string
+	MobileAddress string
 }
 
 type MobileNoCodeTemplate struct {
