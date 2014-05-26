@@ -3,7 +3,7 @@
 	"ServerPort": 8080,
 	"HTTPRoutes": {
 		"Root": "/",
-		"Websocket": "/websocket",
+		"Websocket": "/ws",
 		"Javascript": {
 			"Route": "/javascript/",
 			"RootLocation": "../../client/"
@@ -19,9 +19,9 @@
 	},
 	"Lobby": {
 		"InactivityNoActivityMinutes": 5,
-		"InactivityAfterActivitySeconds": 5
+		"InactivityAfterActivitySeconds": 60
 	},
 	"Mobile": {
-		"DefaultUpdateFrequencyMilliseconds": 1000
+		"DefaultUpdateFrequencyMilliseconds": 500
 	}	
 }

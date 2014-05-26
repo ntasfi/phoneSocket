@@ -12,7 +12,7 @@ var myAddress = findIpAddress() //find a better way to find this...maybe create 
 var configuration = readConfiguration("configuration.json")
 
 func main() {
-	fmt.Println(myAddress)
+	fmt.Println("Server address is", myAddress)
 	var serverURI = fmt.Sprintf("%s:%d", configuration.ServerAddress, configuration.ServerPort)
 	var isMobile = regexp.MustCompile(`(M|m)obile|(I|i)P(hone|od|ad)|(A|a)ndroid|(B|b)lackBerry|(I|i)EMobile|(K|k)indle|(N|n)etFront|(S|s)ilk-Accelerated|(hpw|web)OS|(F|f)ennec|(M|m)inimo|(O|o)pera (M|m)(obi|ini)|(B|b)lazer|(D|d)olfin|(D|d)olphin|(S|s)kyfire|(Z|z)une`)
 
@@ -34,7 +34,6 @@ func main() {
 		}))
 
 	http.Handle(configuration.HTTPRoutes.Javascript.Route, http.StripPrefix(configuration.HTTPRoutes.Javascript.Route, http.FileServer(http.Dir(configuration.HTTPRoutes.Javascript.RootLocation))))
-
 	http.Handle(configuration.HTTPRoutes.Images.Route, http.StripPrefix(configuration.HTTPRoutes.Images.Route, http.FileServer(http.Dir(configuration.HTTPRoutes.Images.RootLocation))))
 
 	http.Handle(configuration.HTTPRoutes.Websocket, websocket.Handler(
@@ -43,8 +42,7 @@ func main() {
 		}))
 
 	fmt.Println("Binding and listening on", serverURI)
-	err := http.ListenAndServe(serverURI, nil)
-	if err != nil {
+	if err := http.ListenAndServe(serverURI, nil); err != nil {
 		log.Fatal("ListenAndServe:", err)
 	}
 }

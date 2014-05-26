@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"fmt"
+	"github.com/dchest/uniuri"
 	"html/template"
 	"net/http"
 	"regexp"
@@ -48,8 +49,8 @@ func handleDesktop(newLobbyChan chan *lobby, w http.ResponseWriter, req *http.Re
 
 		newLobby := &lobby{}                      //make a new lobby object
 		newLobby.settings = make(map[string]bool) //initalize
-		//newLobby.id = strconv.FormatInt(time.Now().Unix(), 10)                           //take the unix current time and use it as the lobby id
-		newLobby.id = "dator"
+		newLobby.id = uniuri.NewLen(7)            //make a new 7 char string
+		//newLobby.id = "dator"
 		newLobby.numberAllowedUsers, _ = strconv.Atoi(settings["numberAllowedUsers"][0]) //TODO: make sure its an int, validation!
 
 		delete(settings, "numberAllowedUsers") //remove it
@@ -89,7 +90,6 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 	}
 
 	//its the first connect
-
 	fmt.Println("handleSocket: Message -", message)
 
 	//TODO: make this less sloppy.
@@ -149,7 +149,7 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 			select {
 			case clientData := <-handlerChan:
 				if err := websocket.JSON.Send(ws, clientData); err != nil {
-					fmt.Println("Error occured:", err)
+					fmt.Println("handlers:", err)
 					killHubChan <- initialRecievedEntity //kill this
 					isDead = true                        //not sure if needed
 				}
@@ -176,7 +176,7 @@ func handleSocket(socketConnChan chan socketEntity, killHubChan chan entity, ws 
 			recievedUpdate.Timestamp = time.Now().Unix()
 
 			if err := websocket.Message.Receive(ws, &message); err != nil { //receive the message here from the device
-				fmt.Println("Error occured:", err)
+				fmt.Println("handlers:", err)
 				killHubChan <- initialRecievedEntity //kill this
 				return
 			}

@@ -44,11 +44,4 @@ func createExecuteTemplate(w http.ResponseWriter, templateIdentifier string, dat
 	templ := template.Must(template.New(templateIdentifier).Parse(templateString)) //render original page
 
 	return templ.ExecuteTemplate(w, templateIdentifier, data)
-
-	// if data != nil {
-	// 	return templ.ExecuteTemplate(w, templateIdentifier, data)
-	// } else {
-	// 	return templ.Execute(w, nil)
-	// }
-
 }
